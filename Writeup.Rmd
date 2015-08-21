@@ -1,0 +1,54 @@
+---
+title: "Practical Machine Learning Project"
+output: html_document
+---
+
+# Introduction
+
+In this project, our goal is to build a model that accurately predicts the manner (both correct and incorrect) in which a person performs a barbell lift. We are provided with a training data set and a data set containing 20 test cases. We will train our model using the data in the training set, with the "classe" variable as the variable to be predicted by the model. After training our model sufficiently, we will use it to predict the 20 test cases. Before deciding on an appropriate predictive model, we will read in and explore the training data.
+
+```{r, cache=TRUE}
+library(caret)
+library(randomForest)
+library(rattle)
+library(rpart.plot)
+library(CORElearn)
+setwd("C:/Users/Andrei/Documents/Data Science Specialization/Practical Machine Learning/Final Project/PracticalMachineLearning")
+training = read.csv("training.csv")
+```
+
+# Data and Methods
+
+We will first eliminate the variables from the data set that should not have any impact on the prediction. These are the first few variables in the data set - X, user name, and the time stamp variables. We will then examine the relationship between the outcome variable classe and a potential predictor roll_belt in a plot.
+
+```{r}
+train2 = training[,-c(1,2,3,4,5)]
+plot(train2$classe, train2$roll_belt, main = "Roll Belt vs. Manner of Exercise",
+     xlab = "Manner", ylab = "Roll Belt")
+```
+
+We observe from the box plot above that, while the spreads in the observed roll belt variable are similar for each manner, the distribution of this variable for manner A is heavily right-skewed, while the distributions of the variable for the other four manners are left-skewed. This observation indicates that this variable is likely helpful in predicting manner (differentiating between manner A and not manner A). 
+
+In order to decide which method is best to use, we return to our goals for the project. We wish to predict a categorical outcome variable, the manner in which a participant performed a barbell lift. A classification tree would seem like a natural fit for this type of goal. However, since our end goal is to correctly predict the 20 test cases after training our model, a classification tree may not be the best approach. Classification trees tend to have higher variances and lower predictive power than other methods we have learned. However, there is a method that retains all of the benefits of classification trees while addressing the limitations. This is the random forest method, which is what we will be using to train our model. The random forest method first reduces variance by using bagging (bootstrap aggregating), which trains individual trees on bootstrap samples from the training data set. Aggregating across all trees with this method reduces the variance in our predictions while not affecting the bias. The random forest method also uses a subset of predictors at each split within individual trees, further reducing variance and improving prediction accuracy. 
+
+The random forest method therefore retains the advantages of classification trees, but addresses the shortcomings of the classification tree method. Aggregating across multiple trees makes the random forest method very difficult to interpret; however, we are not so interested in interpretation in this case, moreso in prediction accuracy. The random forest method also takes a longer time than many other methods due to the requirement of creating multiple trees based on bootstrap samples. However, we are also not as interested in cutting down method time. Therefore, random forest is the method best suited to fit our goals in this project. 
+
+We will fit a model of classe using all the remaining predictors in the training data set. We will use the random forest method, since we have determined that it is the method that best fits our goals for this project. We will use the out-of-bag estimate of the error rate for cross-validation. The out-of-bag estimate of the error rate is found by obtaining the mean prediction error on each training observation using only trees that did not contain that observation in their bootstrap sample. Since we are predicting 20 different test cases, we would like our out of sample error rate to be less than 5%. Since we have a lot of data and the random forest method boosts accuracy, we are expecting an error rate of less than 1%.
+
+# Results
+
+Below we fit a model of classe that includes all the predictors in our data set in order to maximize our usage of available information. We will use the random forest method with 501 separate trees (odd number used to break ties) and the default for feature selection. Results are given after the code.
+
+```{r, cache = TRUE}
+set.seed(355)
+mannerrf = CoreModel(classe ~ ., data = train2, model = "rf", rfNoTrees = 501)
+rfOOB(mannerrf)
+```
+
+From the output above, we see that the out-of-bag estimate of the accuracy is 99.577%, meaning that the error rate is 0.423%. While this is likely to be an overestimate, since all trained models are overfitted to their training sets to some degree, this is a very promising error rate. We have now examined the training data, decided on a best method for training the prediction model, compiled the model, assessed the out of sample error rate, and explained our reasoning at each step. We can now conclude the writeup portion of the assignment and proceed to using our model for predicting the test cases.
+
+# References
+
+* Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6.
+
+* Gareth James; Daniela Witten; Trevor Hastie; Robert Tibshirani (2013). An Introduction to Statistical Learning. Springer. pp. 316-321.
